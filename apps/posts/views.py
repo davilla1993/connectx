@@ -43,6 +43,7 @@ class FeedView(SocialLoginRequired, View):
             User.objects
             .exclude(pk=request.user.pk)
             .exclude(pk__in=following_ids)
+            .filter(is_staff=False, is_superuser=False)
             .select_related('profile')[:5]
         )
 
