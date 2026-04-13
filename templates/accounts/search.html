@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Recherche — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+
+        {# Recherche mobile #}
+        <form class="d-md-none mb-4" action="{% url 'accounts:search' %}" method="get">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Rechercher…" value="{{ query }}">
+                <button class="btn text-white" style="background:var(--cx-primary);">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+
+        {% if query %}
+            <h6 class="text-muted mb-3">
+                {{ users|length }} résultat{{ users|length|pluralize }} pour « {{ query }} »
+            </h6>
+
+            {% for user in users %}
+            <div class="cx-card p-3 mb-2 d-flex align-items-center gap-3">
+                {% if user.profile.avatar %}
+                    <img src="{{ user.profile.avatar.url }}" class="avatar" style="width:50px;height:50px;" alt="">
+                {% else %}
+                    <div class="avatar-initials" style="width:50px;height:50px;font-size:1.2rem;flex-shrink:0;">
+                        {{ user.username|first|upper }}
+                    </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                    <a href="{% url 'accounts:user_profile' user.username %}"
+                       class="fw-bold text-decoration-none" style="color:var(--cx-primary);">
+                        {{ user.username }}
+                    </a>
+                    {% if user.profile.bio %}
+                        <div class="text-muted small text-truncate">{{ user.profile.bio }}</div>
+                    {% endif %}
+                </div>
+                <button class="btn btn-sm follow-btn {% if user.is_following %}btn-outline-secondary{% else %}btn-primary{% endif %}"
+                        style="{% if not user.is_following %}background:var(--cx-accent);border-color:var(--cx-accent);{% endif %}"
+                        data-username="{{ user.username }}">
+                    {% if user.is_following %}Abonné{% else %}Suivre{% endif %}
+                </button>
+            </div>
+            {% empty %}
+                <div class="cx-card p-5 text-center text-muted">
+                    <i class="bi bi-person-x fs-1 mb-2 d-block"></i>
+                    Aucun utilisateur trouvé pour « {{ query }} ».
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="cx-card p-5 text-center text-muted">
+                <i class="bi bi-search fs-1 mb-2 d-block" style="color:var(--cx-accent)"></i>
+                Tapez un nom d'utilisateur pour le trouver.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.follow-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+        const username = this.dataset.username;
+        fetch(`/social/${username}/follow/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.following) {
+                this.textContent = 'Abonné';
+                this.className = 'btn btn-sm btn-outline-secondary follow-btn';
+                this.style.background = '';
+                this.style.borderColor = '';
+            } else {
+                this.textContent = 'Suivre';
+                this.className = 'btn btn-sm btn-primary follow-btn';
+                this.style.background = 'var(--cx-accent)';
+                this.style.borderColor = 'var(--cx-accent)';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

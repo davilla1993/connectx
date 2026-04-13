@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Modifier le profil — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="cx-card p-4">
+            <h5 class="fw-bold mb-4"><i class="bi bi-gear me-2"></i>Modifier le profil</h5>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn text-white" style="background: var(--cx-primary);">Enregistrer</button>
+                    <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

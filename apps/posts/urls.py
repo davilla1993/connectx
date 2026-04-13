@@ -1,0 +1,13 @@
+from django.urls import path
+
+from . import views
+
+app_name = 'posts'
+
+urlpatterns = [
+    path('', views.FeedView.as_view(), name='feed'),
+    path('create/', views.PostCreateView.as_view(), name='create'),
+    path('<uuid:public_id>/', views.PostDetailView.as_view(), name='detail'),
+    path('<uuid:public_id>/delete/', views.PostDeleteView.as_view(), name='delete'),
+    path('<uuid:public_id>/like/', views.LikeToggleView.as_view(), name='like'),
+]

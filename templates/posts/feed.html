@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% block title %}Fil d'actualité — ConnectX{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Grille d'images */
+.post-images-grid { display: grid; gap: 4px; border-radius: 12px; overflow: hidden; }
+.post-images-grid.count-1 { grid-template-columns: 1fr; }
+.post-images-grid.count-2 { grid-template-columns: 1fr 1fr; }
+.post-images-grid.count-3 { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
+.post-images-grid.count-3 .img-wrap:first-child { grid-column: 1 / -1; }
+.post-images-grid.count-4 { grid-template-columns: 1fr 1fr; }
+.post-images-grid .img-wrap img {
+    width: 100%; height: 220px; object-fit: cover; display: block; cursor: pointer;
+    transition: opacity .2s;
+}
+.post-images-grid .img-wrap img:hover { opacity: .92; }
+
+/* Prévisualisation */
+#preview-zone { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.preview-thumb { position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; }
+.preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.preview-thumb .remove-img {
+    position: absolute; top: 2px; right: 2px;
+    background: rgba(0,0,0,.6); color: #fff; border: none;
+    border-radius: 50%; width: 20px; height: 20px;
+    font-size: 11px; line-height: 20px; text-align: center; cursor: pointer; padding: 0;
+}
+
+/* Lightbox */
+#lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,.9);
+    z-index:9999; align-items:center; justify-content:center; }
+#lightbox img { max-width:90vw; max-height:90vh; border-radius:8px; }
+#lightbox.open { display:flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center g-4">
+    <div class="col-lg-7">
+
+        {# ── Formulaire de création ────────────────────────────────────── #}
+        <div class="cx-card p-4 mb-4">
+            <form method="post" action="{% url 'posts:create' %}" enctype="multipart/form-data" id="post-form">
+                {% csrf_token %}
+                <div class="d-flex gap-3 align-items-start">
+                    {% if request.user.profile.avatar %}
+                        <img src="{{ request.user.profile.avatar.url }}" class="avatar"
+                             style="width:42px;height:42px;" alt="">
+                    {% else %}
+                        <div class="avatar-initials" style="width:42px;height:42px;flex-shrink:0;">
+                            {{ request.user.username|first|upper }}
+                        </div>
+                    {% endif %}
+                    <textarea name="content" id="post-content"
+                              class="form-control border-0 bg-light rounded-3"
+                              rows="3" placeholder="Quoi de neuf, {{ request.user.username }} ?"></textarea>
+                </div>
+
+                {# Zone de prévisualisation des images #}
+                <div id="preview-zone"></div>
+
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                    <div class="d-flex gap-2 align-items-center">
+                        <label class="btn btn-sm btn-outline-secondary rounded-pill mb-0" for="id_images">
+                            <i class="bi bi-image me-1"></i> Photo
+                            <input type="file" id="id_images" name="images"
+                                   multiple accept="image/jpeg,image/png,image/gif,image/webp"
+                                   class="d-none">
+                        </label>
+                        <span id="img-count" class="text-muted small"></span>
+                    </div>
+                    <button type="submit" id="submit-btn"
+                            class="btn btn-sm text-white rounded-pill px-4"
+                            style="background: var(--cx-accent);">
+                        Publier
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {# ── Liste des posts ───────────────────────────────────────────── #}
+        {% for post in posts %}
+        <div class="cx-card mb-3">
+            <div class="p-4 pb-2">
+
+                {# En-tête auteur #}
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    {% if post.author.profile.avatar %}
+                        <img src="{{ post.author.profile.avatar.url }}" class="avatar"
+                             style="width:44px;height:44px;" alt="">
+                    {% else %}
+                        <div class="avatar-initials" style="width:44px;height:44px;">
+                            {{ post.author.username|first|upper }}
+                        </div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <a href="{% url 'accounts:user_profile' post.author.username %}"
+                           class="fw-bold text-decoration-none" style="color:var(--cx-primary);">
+                            {{ post.author.username }}
+                        </a>
+                        <div class="text-muted small">{{ post.created_at|timesince }}</div>
+                    </div>
+                    {% if post.author == request.user %}
+                    <form method="post" action="{% url 'posts:delete' post.public_id %}">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-link text-danger p-0"
+                                onclick="return confirm('Supprimer cette publication ?')" title="Supprimer">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                {# Contenu #}
+                {% if post.content %}
+                <p class="post-content mb-3">{{ post.content }}</p>
+                {% endif %}
+
+                {# Grille d'images #}
+                {% with imgs=post.images.all %}
+                {% if imgs %}
+                <div class="post-images-grid count-{{ imgs|length }} mb-3">
+                    {% for img in imgs %}
+                    <div class="img-wrap">
+                        <img src="{{ img.image.url }}" alt="{{ img.alt_text }}"
+                             data-src="{{ img.image.url }}" class="lightbox-trigger">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+
+            {# Actions #}
+            <div class="border-top px-4 py-2 d-flex gap-1">
+                <button class="btn-action like-btn {% if post.user_liked %}liked{% endif %}"
+                        data-public-id="{{ post.public_id }}">
+                    <i class="bi bi-heart{% if post.user_liked %}-fill{% endif %} me-1"></i>
+                    <span class="like-count">{{ post.likes_count }}</span>
+                </button>
+                <a href="{% url 'posts:detail' post.public_id %}" class="btn-action text-decoration-none">
+                    <i class="bi bi-chat me-1"></i> {{ post.comments_count }}
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="cx-card p-5 text-center text-muted">
+            <i class="bi bi-people fs-1 mb-3 d-block" style="color:var(--cx-accent);"></i>
+            <h6>Votre fil est vide</h6>
+            <p class="mb-0 small">Suivez des utilisateurs pour voir leurs publications ici.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {# ── Sidebar suggestions ───────────────────────────────────────────── #}
+    {% if suggestions %}
+    <div class="col-lg-3 d-none d-lg-block">
+        <div class="cx-card p-3 cx-sidebar">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold small text-muted text-uppercase">Suggestions</span>
+                <a href="{% url 'accounts:suggestions' %}" class="small text-decoration-none"
+                   style="color:var(--cx-accent)">Voir tout</a>
+            </div>
+            {% for s in suggestions %}
+            <div class="d-flex align-items-center gap-2 mb-3">
+                {% if s.profile.avatar %}
+                    <img src="{{ s.profile.avatar.url }}" class="avatar" style="width:38px;height:38px;" alt="">
+                {% else %}
+                    <div class="avatar-initials" style="width:38px;height:38px;font-size:.9rem;flex-shrink:0;">
+                        {{ s.username|first|upper }}
+                    </div>
+                {% endif %}
+                <a href="{% url 'accounts:user_profile' s.username %}"
+                   class="text-decoration-none fw-semibold small flex-grow-1 text-truncate"
+                   style="color:var(--cx-primary)">{{ s.username }}</a>
+                <button class="btn btn-sm follow-btn"
+                        style="background:var(--cx-accent);border-color:var(--cx-accent);color:#fff;font-size:.75rem;padding:2px 10px;"
+                        data-username="{{ s.username }}">Suivre</button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{# ── Lightbox ──────────────────────────────────────────────────────────── #}
+<div id="lightbox" onclick="this.classList.remove('open')">
+    <img id="lightbox-img" src="" alt="">
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+const MAX_IMAGES = 5;
+
+// ── Prévisualisation images ─────────────────────────────────────────────────
+const fileInput   = document.getElementById('id_images');
+const previewZone = document.getElementById('preview-zone');
+const imgCount    = document.getElementById('img-count');
+let selectedFiles = [];
+
+fileInput.addEventListener('change', function () {
+    const newFiles = Array.from(this.files);
+    const combined = [...selectedFiles, ...newFiles].slice(0, MAX_IMAGES);
+    selectedFiles = combined;
+    renderPreviews();
+    // Réinitialise l'input pour permettre la re-sélection
+    this.value = '';
+});
+
+function renderPreviews() {
+    previewZone.innerHTML = '';
+    imgCount.textContent = selectedFiles.length ? `${selectedFiles.length}/${MAX_IMAGES}` : '';
+    selectedFiles.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const wrap = document.createElement('div');
+            wrap.className = 'preview-thumb';
+            wrap.innerHTML = `
+                <img src="${e.target.result}" alt="">
+                <button type="button" class="remove-img" data-idx="${idx}">✕</button>`;
+            wrap.querySelector('.remove-img').addEventListener('click', () => {
+                selectedFiles.splice(idx, 1);
+                renderPreviews();
+            });
+            previewZone.appendChild(wrap);
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Synchronise un DataTransfer pour envoyer les bons fichiers
+    const dt = new DataTransfer();
+    selectedFiles.forEach(f => dt.items.add(f));
+    fileInput.files = dt.files;
+}
+
+// ── Lightbox ────────────────────────────────────────────────────────────────
+document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('lightbox-trigger')) {
+        document.getElementById('lightbox-img').src = e.target.dataset.src;
+        document.getElementById('lightbox').classList.add('open');
+    }
+});
+
+// ── Like ────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.like-btn').forEach(btn => {
+    const publicId = btn.dataset.publicId;
+    // État initial depuis liked_ids Django
+    // (déjà appliqué via classe CSS dans le template)
+
+    btn.addEventListener('click', function () {
+        fetch(`/posts/${publicId}/like/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF},
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.querySelector('.like-count').textContent = data.count;
+            const icon = this.querySelector('i');
+            if (data.liked) {
+                icon.className = 'bi bi-heart-fill me-1';
+                this.classList.add('liked');
+            } else {
+                icon.className = 'bi bi-heart me-1';
+                this.classList.remove('liked');
+            }
+        });
+    });
+});
+
+// ── Follow sidebar ──────────────────────────────────────────────────────────
+document.querySelectorAll('.follow-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+        const row = this.closest('.d-flex');
+        fetch(`/social/${this.dataset.username}/follow/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF},
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.following) {
+                this.textContent = '✓';
+                this.style.background = '#28a745';
+                setTimeout(() => { row.style.opacity = '0'; }, 600);
+                setTimeout(() => row.remove(), 1000);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

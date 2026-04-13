@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Découvrir — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <h5 class="fw-bold mb-4"><i class="bi bi-people-fill me-2" style="color:var(--cx-accent)"></i>Découvrir des personnes</h5>
+
+        {% for user in suggestions %}
+        <div class="cx-card p-4 mb-3 d-flex align-items-center gap-4">
+            {% if user.profile.avatar %}
+                <img src="{{ user.profile.avatar.url }}" class="avatar" style="width:60px;height:60px;" alt="">
+            {% else %}
+                <div class="avatar-initials" style="width:60px;height:60px;font-size:1.4rem;flex-shrink:0;">
+                    {{ user.username|first|upper }}
+                </div>
+            {% endif %}
+            <div class="flex-grow-1">
+                <a href="{% url 'accounts:user_profile' user.username %}"
+                   class="fw-bold text-decoration-none fs-6" style="color:var(--cx-primary);">
+                    {{ user.username }}
+                </a>
+                {% if user.profile.bio %}
+                    <div class="text-muted small mt-1">{{ user.profile.bio }}</div>
+                {% endif %}
+                <div class="text-muted small mt-1">
+                    <i class="bi bi-people"></i> {{ user.follower_relations.count }} abonné{{ user.follower_relations.count|pluralize }}
+                </div>
+            </div>
+            <button class="btn follow-btn btn-primary"
+                    style="background:var(--cx-accent);border-color:var(--cx-accent);"
+                    data-username="{{ user.username }}">
+                <i class="bi bi-person-plus-fill me-1"></i> Suivre
+            </button>
+        </div>
+        {% empty %}
+            <div class="cx-card p-5 text-center text-muted">
+                <i class="bi bi-check-circle fs-1 mb-3 d-block" style="color:var(--cx-accent)"></i>
+                <h6>Vous suivez déjà tout le monde !</h6>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.follow-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+        const username = this.dataset.username;
+        const card = this.closest('.cx-card');
+        fetch(`/social/${username}/follow/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.following) {
+                // Feedback visuel puis retire la carte du DOM
+                this.innerHTML = '<i class="bi bi-person-check-fill me-1"></i> Abonné !';
+                this.className = 'btn btn-outline-secondary follow-btn';
+                this.style.background = '';
+                this.style.borderColor = '';
+                setTimeout(() => card.style.opacity = '0', 800);
+                setTimeout(() => card.remove(), 1200);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

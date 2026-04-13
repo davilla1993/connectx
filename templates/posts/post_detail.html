@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}Publication de {{ post.author.username }} — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center g-4">
+    <div class="col-lg-7">
+
+        <div class="cx-card mb-3">
+            <div class="p-4">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    {% if post.author.profile.avatar %}
+                        <img src="{{ post.author.profile.avatar.url }}" class="avatar" style="width:44px;height:44px;" alt="">
+                    {% else %}
+                        <div class="avatar-initials" style="width:44px;height:44px;">
+                            {{ post.author.username|first|upper }}
+                        </div>
+                    {% endif %}
+                    <div>
+                        <a href="{% url 'accounts:user_profile' post.author.username %}"
+                           class="fw-bold text-decoration-none" style="color: var(--cx-primary);">
+                            {{ post.author.username }}
+                        </a>
+                        <div class="text-muted small">{{ post.created_at|date:"d M Y à H:i" }}</div>
+                    </div>
+                </div>
+
+                <p class="post-content mb-3">{{ post.content }}</p>
+
+                {% for img in post.images.all %}
+                    <img src="{{ img.image.url }}" class="post-img mb-2" alt="{{ img.alt_text }}">
+                {% endfor %}
+            </div>
+
+            <div class="border-top px-4 py-2 d-flex gap-1">
+                <button class="btn-action like-btn {% if liked %}liked{% endif %}"
+                        data-public-id="{{ post.public_id }}">
+                    <i class="bi bi-heart{% if liked %}-fill{% endif %} me-1"></i>
+                    <span class="like-count">{{ post.likes_count }}</span>
+                </button>
+                <span class="btn-action">
+                    <i class="bi bi-chat me-1"></i> {{ post.comments_count }} commentaire{{ post.comments_count|pluralize }}
+                </span>
+            </div>
+        </div>
+
+        {# Commentaires #}
+        {% for comment in comments %}
+        <div class="cx-card p-3 mb-2">
+            <div class="d-flex gap-2">
+                <div class="avatar-initials" style="width:36px;height:36px;flex-shrink:0;font-size:.9rem;">
+                    {{ comment.author.username|first|upper }}
+                </div>
+                <div>
+                    <span class="fw-semibold">{{ comment.author.username }}</span>
+                    <span class="ms-2">{{ comment.content }}</span>
+                    <div class="text-muted small mt-1">{{ comment.created_at|timesince }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {# Formulaire commentaire #}
+        <div class="cx-card p-4 mt-2">
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex gap-3 align-items-start">
+                    <div class="avatar-initials" style="width:36px;height:36px;flex-shrink:0;font-size:.9rem;">
+                        {{ request.user.username|first|upper }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <textarea name="content" class="form-control bg-light border-0 rounded-3"
+                            rows="2" placeholder="Ajouter un commentaire..." required></textarea>
+                        <button class="btn btn-sm mt-2 text-white rounded-pill px-4"
+                                style="background: var(--cx-accent);">Commenter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.like-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+        fetch(`/posts/{{ post.public_id }}/like/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.querySelector('.like-count').textContent = data.count;
+            const icon = this.querySelector('i');
+            if (data.liked) {
+                icon.className = 'bi bi-heart-fill me-1';
+                this.classList.add('liked');
+            } else {
+                icon.className = 'bi bi-heart me-1';
+                this.classList.remove('liked');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

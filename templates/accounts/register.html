@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% block title %}Inscription — ConnectX{% endblock %}
+
+{% block extra_css %}
+<style>
+.field-wrap { position: relative; margin-bottom: 1rem; }
+.field-wrap input {
+    padding-right: 2.5rem;
+    transition: border-color .2s;
+}
+.field-icon {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem; pointer-events: none;
+}
+.field-wrap.valid   input { border-color: #10b981; }
+.field-wrap.invalid input { border-color: #f43f5e; }
+.field-wrap.valid   .field-icon { color: #10b981; }
+.field-wrap.invalid .field-icon { color: #f43f5e; }
+.error-msg {
+    font-size: .8rem; color: #dc3545;
+    margin-top: 4px; display: none;
+}
+.field-wrap.invalid .error-msg { display: block; }
+
+/* Jauge de force du mot de passe */
+#pw-strength-bar {
+    height: 4px; border-radius: 2px;
+    transition: width .3s, background .3s;
+    margin-top: 6px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cx-auth-wrapper">
+    <div class="cx-auth-card w-100">
+        <div class="cx-card p-4 p-md-5">
+            <div class="text-center mb-5">
+                <h1 class="fw-800 display-5 mb-0 text-indigo" style="letter-spacing: -1px;">Connect<span class="text-rose">X</span></h1>
+                <p class="text-muted mt-2">Créez votre compte gratuitement</p>
+            </div>
+
+            <form method="post" id="register-form" novalidate>
+                {% csrf_token %}
+
+                {# Erreurs serveur globales #}
+                {% if form.errors %}
+                <div class="alert alert-danger py-3 px-4 rounded-4 small border-0 shadow-sm mb-4">
+                    <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Erreurs de formulaire :</div>
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <div class="ms-4 text-danger">• {{ error }}</div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {# Username #}
+                <div class="field-wrap mb-4" id="wrap-username">
+                    <label class="form-label">Nom d'utilisateur</label>
+                    <div class="position-relative">
+                        <input type="text" name="username" id="id_username"
+                               class="form-control" placeholder="ex: alice_dupont"
+                               value="{{ form.username.value|default:'' }}" autocomplete="username">
+                        <i class="bi field-icon" id="icon-username" style="top:50%; right: 15px; position:absolute; transform:translateY(-50%);"></i>
+                    </div>
+                    <div class="error-msg" id="err-username"></div>
+                </div>
+
+                {# Email #}
+                <div class="field-wrap mb-4" id="wrap-email">
+                    <label class="form-label">Adresse e-mail</label>
+                    <div class="position-relative">
+                        <input type="email" name="email" id="id_email"
+                               class="form-control" placeholder="ex: alice@email.com"
+                               value="{{ form.email.value|default:'' }}" autocomplete="email">
+                        <i class="bi field-icon" id="icon-email" style="top:50%; right: 15px; position:absolute; transform:translateY(-50%);"></i>
+                    </div>
+                    <div class="error-msg" id="err-email"></div>
+                </div>
+
+                {# Mot de passe #}
+                <div class="field-wrap mb-4" id="wrap-password1">
+                    <label class="form-label">Mot de passe</label>
+                    <div class="position-relative">
+                        <input type="password" name="password1" id="id_password1"
+                               class="form-control" placeholder="8 caractères minimum"
+                               autocomplete="new-password">
+                        <i class="bi field-icon" id="icon-password1" style="top:50%; right: 15px; position:absolute; transform:translateY(-50%);"></i>
+                    </div>
+                    <div id="pw-strength-bar" style="width:0%;background:#e2e8f0;"></div>
+                    <div class="error-msg" id="err-password1"></div>
+                </div>
+
+                {# Confirmation #}
+                <div class="field-wrap mb-4" id="wrap-password2">
+                    <label class="form-label">Confirmer le mot de passe</label>
+                    <div class="position-relative">
+                        <input type="password" name="password2" id="id_password2"
+                               class="form-control" placeholder="Répétez le mot de passe"
+                               autocomplete="new-password">
+                        <i class="bi field-icon" id="icon-password2" style="top:50%; right: 15px; position:absolute; transform:translateY(-50%);"></i>
+                    </div>
+                    <div class="error-msg" id="err-password2"></div>
+                </div>
+
+                <button type="submit" id="submit-btn"
+                        class="btn btn-accent btn-lg w-100 py-3 mt-3 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                    <i class="bi bi-person-plus-fill"></i> Créer mon compte
+                </button>
+            </form>
+
+            <div class="text-center mt-5 pt-4 border-top opacity-75">
+                <p class="mb-0 text-muted small">
+                    Déjà un compte ?
+                    <a href="{% url 'accounts:login' %}" class="fw-800 text-decoration-none ms-1" style="color: var(--cx-primary);">Connectez-vous</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function setValid(id) {
+    const wrap = document.getElementById('wrap-' + id);
+    const icon = document.getElementById('icon-' + id);
+    wrap.classList.add('valid');
+    wrap.classList.remove('invalid');
+    icon.className = 'bi bi-check-circle-fill field-icon';
+}
+
+function setInvalid(id, msg) {
+    const wrap = document.getElementById('wrap-' + id);
+    const icon = document.getElementById('icon-' + id);
+    const err  = document.getElementById('err-' + id);
+    wrap.classList.add('invalid');
+    wrap.classList.remove('valid');
+    icon.className = 'bi bi-x-circle-fill field-icon';
+    err.textContent = msg;
+}
+
+function setNeutral(id) {
+    const wrap = document.getElementById('wrap-' + id);
+    const icon = document.getElementById('icon-' + id);
+    wrap.classList.remove('valid', 'invalid');
+    icon.className = '';
+}
+
+// ── Validations ──────────────────────────────────────────────────────────────
+function validateUsername() {
+    const val = document.getElementById('id_username').value.trim();
+    if (!val)                          { setInvalid('username', 'Ce champ est requis.'); return false; }
+    if (val.length < 3)                { setInvalid('username', 'Au moins 3 caractères.'); return false; }
+    if (!/^[\w.@+-]+$/.test(val))      { setInvalid('username', 'Caractères autorisés : lettres, chiffres, . @ + - _'); return false; }
+    setValid('username'); return true;
+}
+
+function validateEmail() {
+    const val = document.getElementById('id_email').value.trim();
+    if (!val)                          { setInvalid('email', 'Ce champ est requis.'); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { setInvalid('email', 'Adresse e-mail invalide.'); return false; }
+    setValid('email'); return true;
+}
+
+function validatePassword1() {
+    const val = document.getElementById('id_password1').value;
+    const bar = document.getElementById('pw-strength-bar');
+
+    if (!val) { setNeutral('password1'); bar.style.width = '0%'; return false; }
+
+    // Force du mot de passe
+    let score = 0;
+    if (val.length >= 8)               score++;
+    if (/[A-Z]/.test(val))             score++;
+    if (/[0-9]/.test(val))             score++;
+    if (/[^A-Za-z0-9]/.test(val))      score++;
+
+    const colors = ['#f43f5e', '#fb923c', '#fbbf24', '#10b981'];
+    const widths = ['25%', '50%', '75%', '100%'];
+    bar.style.width    = widths[score - 1] || '0%';
+    bar.style.background = colors[score - 1] || '#f43f5e';
+
+    if (val.length < 8) { setInvalid('password1', 'Au moins 8 caractères.'); return false; }
+    if (/^\d+$/.test(val)) { setInvalid('password1', 'Le mot de passe ne peut pas être entièrement numérique.'); return false; }
+
+    setValid('password1');
+
+    // Re-valide la confirmation si déjà saisie
+    const p2 = document.getElementById('id_password2').value;
+    if (p2) validatePassword2();
+    return true;
+}
+
+function validatePassword2() {
+    const p1 = document.getElementById('id_password1').value;
+    const p2 = document.getElementById('id_password2').value;
+    if (!p2)       { setInvalid('password2', 'Ce champ est requis.'); return false; }
+    if (p1 !== p2) { setInvalid('password2', 'Les mots de passe ne correspondent pas.'); return false; }
+    setValid('password2'); return true;
+}
+
+// ── Écoute des champs (validation à la saisie, avec délai) ──────────────────
+function debounce(fn, delay) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
+}
+
+document.getElementById('id_username').addEventListener('input',   debounce(validateUsername, 400));
+document.getElementById('id_email').addEventListener('input',      debounce(validateEmail, 400));
+document.getElementById('id_password1').addEventListener('input',  validatePassword1);
+document.getElementById('id_password2').addEventListener('input',  debounce(validatePassword2, 400));
+
+// ── Validation complète à la soumission ─────────────────────────────────────
+document.getElementById('register-form').addEventListener('submit', function (e) {
+    const ok = [validateUsername(), validateEmail(), validatePassword1(), validatePassword2()];
+    if (ok.includes(false)) e.preventDefault();
+});
+</script>
+{% endblock %}

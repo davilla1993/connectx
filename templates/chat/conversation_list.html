@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Messages — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="cx-card">
+            <div class="p-4 border-bottom">
+                <h5 class="fw-bold mb-0"><i class="bi bi-chat-dots-fill me-2" style="color:var(--cx-accent)"></i>Messages</h5>
+            </div>
+            {% for conv in conversations %}
+            <a href="{% url 'chat:detail' conv.public_id %}" class="text-decoration-none text-dark">
+                <div class="d-flex align-items-center gap-3 p-3 border-bottom" style="transition:.2s" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background=''">
+                    {% for participant in conv.participants.all %}
+                        {% if participant != request.user %}
+                        <div class="avatar-initials" style="width:48px;height:48px;flex-shrink:0;">
+                            {{ participant.username|first|upper }}
+                        </div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-semibold">{{ participant.username }}</div>
+                            {% with last=conv.messages.last %}
+                                {% if last %}
+                                    <div class="text-muted small text-truncate">{{ last.content }}</div>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    <div class="text-muted small ms-auto">{{ conv.updated_at|timesince }}</div>
+                </div>
+            </a>
+            {% empty %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-chat-square-dots fs-1 mb-3 d-block" style="color:var(--cx-accent)"></i>
+                    <p class="mb-0">Aucune conversation.<br>Visitez un profil pour envoyer un message.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
