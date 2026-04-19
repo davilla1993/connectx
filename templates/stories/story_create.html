@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Nouvelle Story — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="cx-card p-4">
+            <h5 class="fw-800 mb-1">
+                <i class="bi bi-camera-fill me-2" style="color:var(--cx-accent);"></i>
+                Nouvelle Story
+            </h5>
+            <p class="text-muted small mb-4">Visible par vos abonnés pendant 24h.</p>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Photo *</label>
+                    <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp"
+                           class="form-control" id="story-image-input" required>
+                </div>
+
+                {# Prévisualisation #}
+                <div id="story-preview" class="mb-3 d-none text-center">
+                    <img id="preview-img" src="" alt="Prévisualisation"
+                         style="max-height:320px;border-radius:16px;max-width:100%;object-fit:cover;">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Légende (optionnelle)</label>
+                    <input type="text" name="caption" maxlength="200"
+                           class="form-control" placeholder="Ajouter une légende…">
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a href="{% url 'posts:feed' %}" class="btn btn-outline-secondary flex-grow-1 rounded-3">
+                        Annuler
+                    </a>
+                    <button type="submit" class="btn btn-accent flex-grow-1 rounded-3">
+                        <i class="bi bi-send me-1"></i> Publier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('story-image-input').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('preview-img').src = e.target.result;
+        document.getElementById('story-preview').classList.remove('d-none');
+    };
+    reader.readAsDataURL(file);
+});
+</script>
+{% endblock %}
+{% endblock %}

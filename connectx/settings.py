@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'posts',
     'social',
     'chat',
+    'notifications',
+    'stories',
 ]
 
 MIDDLEWARE = [
@@ -70,6 +72,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'chat.context_processors.unread_messages_count',
+                'notifications.context_processors.unread_notifications_count',
             ],
         },
     },

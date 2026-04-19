@@ -14,6 +14,8 @@ urlpatterns = [
     path('posts/', include('posts.urls')),
     path('social/', include('social.urls')),
     path('chat/', include('chat.urls')),
+    path('notifications/', include('notifications.urls')),
+    path('stories/', include('stories.urls')),
 ]
 
 # Servir les fichiers media en développement

@@ -18,6 +18,8 @@ class FeedView(SocialLoginRequired, View):
     def get(self, request):
         from django.contrib.auth import get_user_model
         from django.db.models import Exists, OuterRef
+        from django.utils import timezone
+        from stories.models import Story
         User = get_user_model()
 
         following_ids = list(
@@ -47,11 +49,27 @@ class FeedView(SocialLoginRequired, View):
             .select_related('profile')[:5]
         )
 
+        # Stories non expirées des utilisateurs suivis + les siennes propres
+        stories = (
+            Story.objects
+            .filter(
+                is_deleted=False,
+                expires_at__gt=timezone.now(),
+                author_id__in=following_ids + [request.user.id],
+            )
+            .select_related('author', 'author__profile')
+            .order_by('-created_at')
+        )
+        # Story de l'utilisateur courant (pour le bouton "Ajouter")
+        my_story = stories.filter(author=request.user).first()
+
         form = PostForm()
         return render(request, self.template_name, {
             'posts': posts,
             'form': form,
             'suggestions': suggestions,
+            'stories': stories,
+            'my_story': my_story,
         })
 
 

@@ -39,6 +39,108 @@
 <div class="row justify-content-center g-4">
     <div class="col-lg-10">
 
+        {# ── Strip Stories ─────────────────────────────────────────────── #}
+        {% if stories %}
+        <div class="cx-card p-3 mb-4">
+            <div class="d-flex gap-3 overflow-auto pb-1" style="scrollbar-width:none;">
+
+                {# Bouton : ajouter ou voir ma propre story #}
+                {% if my_story %}
+                <a href="{% url 'stories:detail' my_story.pk %}" class="text-decoration-none text-center flex-shrink-0">
+                    <div class="position-relative" style="width:60px;">
+                        {% if my_story.author.profile.avatar %}
+                            <img src="{{ my_story.author.profile.avatar.url }}"
+                                 class="avatar" style="width:60px;height:60px;border:3px solid var(--cx-accent);" alt="">
+                        {% else %}
+                            <div class="avatar-initials"
+                                 style="width:60px;height:60px;font-size:1.1rem;border:3px solid var(--cx-accent);">
+                                {{ request.user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        <span class="position-absolute bottom-0 end-0 rounded-circle d-flex align-items-center justify-content-center"
+                              style="width:20px;height:20px;background:var(--cx-accent);border:2px solid #fff;font-size:.7rem;">
+                            <i class="bi bi-play-fill text-white"></i>
+                        </span>
+                    </div>
+                    <div class="small fw-semibold mt-1 text-truncate" style="width:60px;font-size:.72rem;">
+                        Ma story
+                    </div>
+                </a>
+                {% else %}
+                <a href="{% url 'stories:create' %}" class="text-decoration-none text-center flex-shrink-0">
+                    <div class="position-relative" style="width:60px;">
+                        {% if request.user.profile.avatar %}
+                            <img src="{{ request.user.profile.avatar.url }}"
+                                 class="avatar" style="width:60px;height:60px;opacity:.6;" alt="">
+                        {% else %}
+                            <div class="avatar-initials"
+                                 style="width:60px;height:60px;font-size:1.1rem;opacity:.7;">
+                                {{ request.user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        <span class="position-absolute bottom-0 end-0 rounded-circle d-flex align-items-center justify-content-center"
+                              style="width:20px;height:20px;background:var(--cx-accent);border:2px solid #fff;font-size:.8rem;">
+                            <i class="bi bi-plus text-white fw-bold"></i>
+                        </span>
+                    </div>
+                    <div class="small fw-semibold mt-1 text-truncate" style="width:60px;font-size:.72rem;color:var(--cx-accent);">
+                        Ajouter
+                    </div>
+                </a>
+                {% endif %}
+
+                {# Stories des autres utilisateurs #}
+                {% for story in stories %}
+                    {% if story.author != request.user %}
+                    <a href="{% url 'stories:detail' story.pk %}" class="text-decoration-none text-center flex-shrink-0">
+                        <div style="width:60px;">
+                            {% if story.author.profile.avatar %}
+                                <img src="{{ story.author.profile.avatar.url }}"
+                                     class="avatar" style="width:60px;height:60px;border:3px solid var(--cx-accent);" alt="">
+                            {% else %}
+                                <div class="avatar-initials"
+                                     style="width:60px;height:60px;font-size:1.1rem;border:3px solid var(--cx-accent);">
+                                    {{ story.author.username|first|upper }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="small fw-semibold mt-1 text-truncate" style="width:60px;font-size:.72rem;color:var(--cx-primary);">
+                            {{ story.author.username }}
+                        </div>
+                    </a>
+                    {% endif %}
+                {% endfor %}
+
+            </div>
+        </div>
+        {% else %}
+        {# Pas de stories actives : proposer d'en créer une #}
+        <div class="cx-card p-3 mb-4">
+            <div class="d-flex gap-3 overflow-auto pb-1">
+                <a href="{% url 'stories:create' %}" class="text-decoration-none text-center flex-shrink-0">
+                    <div class="position-relative" style="width:60px;">
+                        {% if request.user.profile.avatar %}
+                            <img src="{{ request.user.profile.avatar.url }}"
+                                 class="avatar" style="width:60px;height:60px;opacity:.6;" alt="">
+                        {% else %}
+                            <div class="avatar-initials"
+                                 style="width:60px;height:60px;font-size:1.1rem;opacity:.7;">
+                                {{ request.user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        <span class="position-absolute bottom-0 end-0 rounded-circle d-flex align-items-center justify-content-center"
+                              style="width:20px;height:20px;background:var(--cx-accent);border:2px solid #fff;font-size:.8rem;">
+                            <i class="bi bi-plus text-white fw-bold"></i>
+                        </span>
+                    </div>
+                    <div class="small fw-semibold mt-1 text-truncate" style="width:60px;font-size:.72rem;color:var(--cx-accent);">
+                        Ajouter
+                    </div>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
         {# ── Formulaire de création ────────────────────────────────────── #}
         <div class="cx-card p-4 mb-4">
             <form method="post" action="{% url 'posts:create' %}" enctype="multipart/form-data" id="post-form">

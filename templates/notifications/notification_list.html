@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Notifications — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+
+        <div class="d-flex align-items-center gap-2 mb-4">
+            <i class="bi bi-bell-fill fs-4" style="color:var(--cx-accent);"></i>
+            <h5 class="mb-0 fw-800">Notifications</h5>
+        </div>
+
+        {% if notifications %}
+        <div class="cx-card">
+            {% for notif in notifications %}
+            <div class="d-flex align-items-start gap-3 p-3
+                        {% if not forloop.last %}border-bottom{% endif %}
+                        {% if not notif.is_read %}bg-light{% endif %}">
+
+                {# Avatar de l'expéditeur #}
+                {% if notif.sender.profile.avatar %}
+                    <img src="{{ notif.sender.profile.avatar.url }}" class="avatar"
+                         style="width:42px;height:42px;flex-shrink:0;" alt="">
+                {% else %}
+                    <div class="avatar-initials" style="width:42px;height:42px;flex-shrink:0;font-size:.9rem;">
+                        {{ notif.sender.username|first|upper }}
+                    </div>
+                {% endif %}
+
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        {# Icône selon le type #}
+                        {% if notif.notif_type == 'like' %}
+                            <i class="bi bi-heart-fill" style="color:var(--cx-accent);"></i>
+                        {% elif notif.notif_type == 'comment' %}
+                            <i class="bi bi-chat-fill text-primary"></i>
+                        {% elif notif.notif_type == 'follow' %}
+                            <i class="bi bi-person-plus-fill text-success"></i>
+                        {% elif notif.notif_type == 'message' %}
+                            <i class="bi bi-envelope-fill text-warning"></i>
+                        {% endif %}
+                        <span class="fw-semibold small">{{ notif.get_message }}</span>
+                        {% if not notif.is_read %}
+                            <span class="badge rounded-pill ms-auto"
+                                  style="background:var(--cx-accent);font-size:.6rem;">Nouveau</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted" style="font-size:.78rem;">
+                        {{ notif.created_at|timesince }}
+                    </div>
+                    {% if notif.post %}
+                    <a href="{% url 'posts:detail' notif.post.public_id %}"
+                       class="small text-decoration-none" style="color:var(--cx-accent);">
+                        Voir la publication →
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="cx-card p-5 text-center text-muted">
+            <i class="bi bi-bell-slash fs-1 mb-3 d-block" style="color:var(--cx-accent);"></i>
+            <h6>Aucune notification pour l'instant</h6>
+            <p class="mb-0 small">Vos likes, commentaires et nouveaux abonnés apparaîtront ici.</p>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

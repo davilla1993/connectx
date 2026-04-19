@@ -10,7 +10,8 @@ django_asgi_app = get_asgi_application()
 
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from chat.routing import websocket_urlpatterns
+from chat.routing import websocket_urlpatterns as chat_ws
+from notifications.routing import websocket_urlpatterns as notif_ws
 
 application = ProtocolTypeRouter({
     # Requêtes HTTP classiques → Django
@@ -19,6 +20,6 @@ application = ProtocolTypeRouter({
     # Connexions WebSocket → Channels
     # AuthMiddlewareStack injecte l'utilisateur Django dans le scope
     'websocket': AuthMiddlewareStack(
-        URLRouter(websocket_urlpatterns)
+        URLRouter(chat_ws + notif_ws)
     ),
 })

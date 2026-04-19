@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Story de {{ story.author.username }} — ConnectX{% endblock %}
+
+{% block extra_css %}
+<style>
+.story-viewer {
+    position: fixed;
+    inset: 0;
+    background: #0f172a;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+.story-image {
+    max-height: 85vh;
+    max-width: 90vw;
+    border-radius: 16px;
+    object-fit: contain;
+}
+.story-overlay-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.story-overlay-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+    text-align: center;
+    color: #fff;
+}
+.story-progress {
+    height: 3px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    flex: 1;
+}
+.story-progress-fill {
+    height: 100%;
+    background: #fff;
+    border-radius: 2px;
+    animation: story-timer 10s linear forwards;
+}
+@keyframes story-timer {
+    from { width: 0%; }
+    to   { width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="story-viewer">
+    {# Barre de progression #}
+    <div class="d-flex gap-1 w-100 px-4" style="position:absolute;top:8px;left:0;right:0;">
+        <div class="story-progress">
+            <div class="story-progress-fill"></div>
+        </div>
+    </div>
+
+    {# En-tête auteur #}
+    <div class="story-overlay-top">
+        {% if story.author.profile.avatar %}
+            <img src="{{ story.author.profile.avatar.url }}" class="avatar"
+                 style="width:42px;height:42px;" alt="">
+        {% else %}
+            <div class="avatar-initials" style="width:42px;height:42px;font-size:.9rem;">
+                {{ story.author.username|first|upper }}
+            </div>
+        {% endif %}
+        <div>
+            <div class="text-white fw-bold">{{ story.author.username }}</div>
+            <div class="text-white-50 small">{{ story.created_at|timesince }}</div>
+        </div>
+
+        {% if story.author == request.user %}
+        <form method="post" action="{% url 'stories:delete' story.pk %}" class="ms-auto">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-link text-danger p-0"
+                    onclick="return confirm('Supprimer cette story ?')" title="Supprimer">
+                <i class="bi bi-trash3 fs-5"></i>
+            </button>
+        </form>
+        {% endif %}
+
+        <a href="{% url 'posts:feed' %}" class="btn btn-sm btn-link text-white-50 p-0
+           {% if story.author == request.user %}{% else %}ms-auto{% endif %}"
+           title="Fermer">
+            <i class="bi bi-x-lg fs-5"></i>
+        </a>
+    </div>
+
+    {# Image #}
+    <img src="{{ story.image.url }}" class="story-image" alt="{{ story.caption }}">
+
+    {# Légende #}
+    {% if story.caption %}
+    <div class="story-overlay-bottom">
+        <p class="mb-0 fw-semibold fs-5">{{ story.caption }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Redirige vers le feed après 10s (durée de la barre de progression)
+setTimeout(() => { window.location.href = '{% url "posts:feed" %}'; }, 10000);
+</script>
+{% endblock %}
