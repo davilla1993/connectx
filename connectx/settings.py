@@ -148,7 +148,11 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Optimisation WhiteNoise pour le cache et la compression
+# Création du dossier static s'il n'existe pas pour éviter l'avertissement W004
+if not os.path.exists(STATIC_ROOT):
+    os.makedirs(STATIC_ROOT)
+
+# Optimisation WhiteNoise
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -157,6 +161,9 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+# Empêche WhiteNoise de planter si un fichier référencé (ex: .map) est manquant
+WHITENOISE_MANIFEST_STRICT = False
 
 
 # Fichiers media (images uploadées)
