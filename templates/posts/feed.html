@@ -308,7 +308,7 @@ fileInput.addEventListener('change', function () {
     const combined = [...selectedFiles, ...newFiles].slice(0, MAX_IMAGES);
     selectedFiles = combined;
     renderPreviews();
-    // Réinitialise l'input pour permettre la re-sélection
+    // Réinitialise l'input pour permettre la re-sélection d'un même fichier
     this.value = '';
 });
 
@@ -331,12 +331,15 @@ function renderPreviews() {
         };
         reader.readAsDataURL(file);
     });
+}
 
-    // Synchronise un DataTransfer pour envoyer les bons fichiers
+// Injecte les fichiers dans l'input juste avant l'envoi du formulaire
+// (this.value = '' dans le handler change effacerait fileInput.files si on le faisait avant)
+document.getElementById('post-form').addEventListener('submit', function () {
     const dt = new DataTransfer();
     selectedFiles.forEach(f => dt.items.add(f));
     fileInput.files = dt.files;
-}
+});
 
 // ── Lightbox ────────────────────────────────────────────────────────────────
 document.addEventListener('click', function (e) {
