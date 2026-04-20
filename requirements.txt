@@ -1,0 +1,12 @@
+django
+daphne
+channels
+channels-redis
+django-jazzmin
+django-crispy-forms
+crispy-bootstrap5
+psycopg2-binary
+django-environ
+whitenoise
+gunicorn
+uvicorn

@@ -1,22 +1,30 @@
 import os
 import sys
 from pathlib import Path
+import environ
+
+# Initialisation d'environ
+env = environ.Env(
+    DEBUG=(bool, False)
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Lecture du fichier .env s'il existe
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Ajoute apps/ au chemin Python pour référencer les apps sans préfixe
 sys.path.insert(0, str(BASE_DIR / 'apps'))
 
 # Force psycopg2 à recevoir les messages PostgreSQL en UTF-8
-# (évite UnicodeDecodeError sur Windows avec locale française)
 os.environ.setdefault('PGCLIENTENCODING', 'UTF8')
 os.environ.setdefault('PGSSLMODE', 'prefer')
 
-SECRET_KEY = 'django-insecure-9gu-@^oxsc)%^qt3m=ksz_#%ve7j+^s8+k*(!f6)1a!y9_4w%^'
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-9gu-@^oxsc)%^qt3m=ksz_#%ve7j+^s8+k*(!f6)1a!y9_4w%^')
 
-DEBUG = True
+DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 
 # Application definition
@@ -51,6 +59,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # WhiteNoise pour les fichiers statiques
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -81,25 +90,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'connectx.wsgi.application'
 ASGI_APPLICATION = 'connectx.asgi.application'
 
-# Channel layer en mémoire (dev uniquement)
-# En production : remplacer par channels_redis avec un serveur Redis
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+# Channel layer
+if env('REDIS_URL', default=None):
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [env('REDIS_URL')],
+            },
+        }
     }
-}
+else:
+    # Channel layer en mémoire (dev uniquement)
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
 
 
-# Base de données PostgreSQL
+# Base de données
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'connectx_db',
-        'USER': 'postgres',
-        'PASSWORD': 'toor',
-        'HOST': 'localhost',
-        'PORT': '5432'
-    }
+    'default': env.db('DATABASE_URL', default='postgresql://postgres:toor@localhost:5432/connectx_db')
 }
 
 
@@ -134,6 +146,17 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Optimisation WhiteNoise pour le cache et la compression
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 
 # Fichiers media (images uploadées)

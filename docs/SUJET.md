@@ -8,8 +8,6 @@ complexes.
 • Extension : Notifications en temps réel, stories
 
 
-
-
 ➢ Votre rapport doit faire au minimum 30 pages (hors annexes).
 ➢ Il doit être structuré, clair et bien présenté.
 ➢ Chaque choix technique et méthodologique doit être justifié.
