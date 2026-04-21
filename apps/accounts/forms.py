@@ -28,7 +28,7 @@ class RegisterForm(UserCreationForm):
 class ProfileEditForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ('bio', 'avatar', 'location', 'website')
+        fields = ('bio', 'avatar', 'cover_image', 'location', 'website')
         widgets = {
             'bio': forms.Textarea(attrs={'rows': 4}),
         }
