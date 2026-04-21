@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load post_extras %}
 {% block title %}Publication de {{ post.author.username }} — ConnectX{% endblock %}
 
 {% block content %}
@@ -24,7 +25,7 @@
                     </div>
                 </div>
 
-                <p class="post-content mb-3">{{ post.content }}</p>
+                <p class="post-content mb-3">{{ post.content|linkify }}</p>
 
                 {% for img in post.images.all %}
                     <img src="{{ img.image.url }}" class="post-img mb-2" alt="{{ img.alt_text }}">
@@ -43,33 +44,59 @@
             </div>
         </div>
 
-        {# Commentaires #}
+        {# Commentaires (racines uniquement, avec reponses imbriquees) #}
         {% for comment in comments %}
-        <div class="cx-card p-3 mb-2">
-            <div class="d-flex gap-2">
-                <div class="avatar-initials" style="width:36px;height:36px;flex-shrink:0;font-size:.9rem;">
-                    {{ comment.author.username|first|upper }}
-                </div>
-                <div>
-                    <span class="fw-semibold">{{ comment.author.username }}</span>
-                    <span class="ms-2">{{ comment.content }}</span>
-                    <div class="text-muted small mt-1">{{ comment.created_at|timesince }}</div>
+            {% if not comment.parent_id %}
+            <div class="cx-card p-3 mb-2">
+                <div class="d-flex gap-2">
+                    <div class="avatar-initials" style="width:36px;height:36px;flex-shrink:0;font-size:.9rem;">
+                        {{ comment.author.username|first|upper }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <span class="fw-semibold">{{ comment.author.username }}</span>
+                        <span class="ms-2">{{ comment.content|linkify }}</span>
+                        <div class="text-muted small mt-1">
+                            {{ comment.created_at|timesince }}
+                            · <a href="#" class="reply-link" data-parent-id="{{ comment.id }}"
+                                 data-parent-username="{{ comment.author.username }}">Répondre</a>
+                        </div>
+                        {% for reply in comments %}
+                            {% if reply.parent_id == comment.id %}
+                            <div class="d-flex gap-2 mt-2 ps-3 border-start">
+                                <div class="avatar-initials" style="width:28px;height:28px;flex-shrink:0;font-size:.75rem;">
+                                    {{ reply.author.username|first|upper }}
+                                </div>
+                                <div>
+                                    <span class="fw-semibold small">{{ reply.author.username }}</span>
+                                    <span class="ms-2 small">{{ reply.content|linkify }}</span>
+                                    <div class="text-muted" style="font-size:.72rem;">{{ reply.created_at|timesince }}</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
-        </div>
+            {% endif %}
         {% endfor %}
 
-        {# Formulaire commentaire #}
+        {# Formulaire commentaire / reponse #}
         <div class="cx-card p-4 mt-2">
-            <form method="post">
+            <form method="post" id="comment-form">
                 {% csrf_token %}
+                <input type="hidden" name="parent_id" id="parent-id" value="">
+                <div id="replying-to" class="small text-muted mb-2" style="display:none;">
+                    Réponse à <span id="replying-username" class="fw-semibold"></span>
+                    <a href="#" id="cancel-reply" class="ms-2">annuler</a>
+                </div>
                 <div class="d-flex gap-3 align-items-start">
                     <div class="avatar-initials" style="width:36px;height:36px;flex-shrink:0;font-size:.9rem;">
                         {{ request.user.username|first|upper }}
                     </div>
                     <div class="flex-grow-1">
-                        <textarea name="content" class="form-control bg-light border-0 rounded-3"
-                            rows="2" placeholder="Ajouter un commentaire..." required></textarea>
+                        <textarea name="content" id="comment-textarea"
+                                  class="form-control bg-light border-0 rounded-3"
+                                  rows="2" placeholder="Ajouter un commentaire..." required></textarea>
                         <button class="btn btn-sm mt-2 text-white rounded-pill px-4"
                                 style="background: var(--cx-accent);">Commenter</button>
                     </div>
@@ -82,6 +109,26 @@
 
 {% block extra_js %}
 <script>
+// Repondre a un commentaire
+document.addEventListener('click', function (e) {
+    const link = e.target.closest('.reply-link');
+    if (link) {
+        e.preventDefault();
+        document.getElementById('parent-id').value = link.dataset.parentId;
+        document.getElementById('replying-username').textContent = '@' + link.dataset.parentUsername;
+        document.getElementById('replying-to').style.display = 'block';
+        const ta = document.getElementById('comment-textarea');
+        ta.value = '@' + link.dataset.parentUsername + ' ';
+        ta.focus();
+        return;
+    }
+    if (e.target.id === 'cancel-reply') {
+        e.preventDefault();
+        document.getElementById('parent-id').value = '';
+        document.getElementById('replying-to').style.display = 'none';
+    }
+});
+
 document.querySelectorAll('.like-btn').forEach(btn => {
     btn.addEventListener('click', function () {
         fetch(`/posts/{{ post.public_id }}/like/`, {

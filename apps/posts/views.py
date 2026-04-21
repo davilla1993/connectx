@@ -11,7 +11,7 @@ from social.recommendations import get_suggestions
 from stories.models import Story
 
 from .forms import CommentForm, PostForm
-from .models import Comment, Like, Post, Reaction, SavedPost, Tag
+from .models import Comment, Like, Post, Reaction, Repost, SavedPost, Tag
 from .parser import apply_to_post
 from .ranking import ranked_feed
 
@@ -133,6 +133,11 @@ class PostDetailView(SocialLoginRequired, View):
             comment = form.save(commit=False)
             comment.author = request.user
             comment.post = post
+            parent_id = request.POST.get('parent_id')
+            if parent_id:
+                parent = Comment.objects.filter(pk=parent_id, post=post, is_deleted=False).first()
+                if parent:
+                    comment.parent = parent
             comment.created_by = request.user
             comment.save()
         return redirect('posts:detail', public_id=public_id)
@@ -248,6 +253,81 @@ class ReactionToggleView(SocialLoginRequired, View):
         for t, _ in Reaction.TYPES:
             counts[t] = Reaction.objects.filter(post=post, type=t, is_deleted=False).count()
         return JsonResponse({'current': current, 'counts': counts})
+
+
+class RepostToggleView(SocialLoginRequired, View):
+    def post(self, request, public_id):
+        post = get_object_or_404(Post, public_id=public_id, is_deleted=False)
+        rep, created = Repost.objects.get_or_create(
+            user=request.user, post=post,
+            defaults={'created_by': request.user, 'comment': request.POST.get('comment', '')},
+        )
+        if not created:
+            if rep.is_deleted:
+                rep.is_deleted = False
+                rep.deleted_at = None
+                rep.save()
+                reposted = True
+            else:
+                rep.is_deleted = True
+                rep.deleted_at = timezone.now()
+                rep.save()
+                reposted = False
+        else:
+            reposted = True
+        return JsonResponse({
+            'reposted': reposted,
+            'count': post.reposts.filter(is_deleted=False).count(),
+        })
+
+
+class ExploreView(SocialLoginRequired, View):
+    """
+    Page de decouverte : posts hors de mon graphe social, classes
+    par engagement * decay. Collaborative filtering leger.
+    """
+    template_name = 'posts/explore.html'
+
+    def get(self, request):
+        from datetime import timedelta
+        import math
+        from django.db.models import Count, Exists, OuterRef, Q
+
+        following_ids = set(
+            request.user.following_relations
+            .filter(is_deleted=False)
+            .values_list('following_id', flat=True)
+        )
+        exclude_ids = following_ids | {request.user.id}
+        window_start = timezone.now() - timedelta(days=7)
+
+        liked_sub = Like.objects.filter(
+            post=OuterRef('pk'), user=request.user, is_deleted=False
+        )
+        qs = (
+            Post.objects
+            .filter(is_deleted=False, created_at__gte=window_start)
+            .exclude(author_id__in=exclude_ids)
+            .select_related('author', 'author__profile')
+            .prefetch_related('images')
+            .annotate(
+                user_liked=Exists(liked_sub),
+                likes_total=Count('likes', filter=Q(likes__is_deleted=False), distinct=True),
+                comments_total=Count('comments', filter=Q(comments__is_deleted=False), distinct=True),
+            )
+            .order_by('-likes_total', '-created_at')[:200]
+        )
+
+        now = timezone.now()
+        ranked = []
+        for p in qs:
+            age_h = max(0.0, (now - p.created_at).total_seconds() / 3600.0)
+            engagement = 1.0 + math.log1p(p.likes_total + 2 * p.comments_total)
+            decay = math.exp(-age_h / 48.0)
+            p.score = engagement * decay
+            ranked.append(p)
+        ranked.sort(key=lambda p: -p.score)
+        return render(request, self.template_name, {'posts': ranked[:30]})
 
 
 class TagDetailView(SocialLoginRequired, View):

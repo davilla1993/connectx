@@ -332,6 +332,18 @@ document.addEventListener('click', function (e) {
     });
 });
 
+// ── Repost ──────────────────────────────────────────────────────────────────
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.repost-btn');
+    if (!btn) return;
+    const was = btn.classList.contains('reposted');
+    btn.classList.toggle('reposted', !was);
+    fetch(`/posts/${btn.dataset.publicId}/repost/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF},
+    }).catch(() => btn.classList.toggle('reposted', was));
+});
+
 // ── Save post (bookmark) ────────────────────────────────────────────────────
 document.addEventListener('click', function (e) {
     const btn = e.target.closest('.save-btn');

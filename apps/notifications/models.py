@@ -16,16 +16,24 @@ class Notification(BaseModel):
     is_read   : marque la notification comme lue
     """
 
-    TYPE_LIKE    = 'like'
-    TYPE_COMMENT = 'comment'
-    TYPE_FOLLOW  = 'follow'
-    TYPE_MESSAGE = 'message'
+    TYPE_LIKE     = 'like'
+    TYPE_COMMENT  = 'comment'
+    TYPE_FOLLOW   = 'follow'
+    TYPE_MESSAGE  = 'message'
+    TYPE_MENTION  = 'mention'
+    TYPE_REACTION = 'reaction'
+    TYPE_REPOST   = 'repost'
+    TYPE_REPLY    = 'reply'
 
     NOTIF_TYPES = [
-        (TYPE_LIKE,    'Like'),
-        (TYPE_COMMENT, 'Commentaire'),
-        (TYPE_FOLLOW,  'Abonnement'),
-        (TYPE_MESSAGE, 'Message'),
+        (TYPE_LIKE,     'Like'),
+        (TYPE_COMMENT,  'Commentaire'),
+        (TYPE_FOLLOW,   'Abonnement'),
+        (TYPE_MESSAGE,  'Message'),
+        (TYPE_MENTION,  'Mention'),
+        (TYPE_REACTION, 'Réaction'),
+        (TYPE_REPOST,   'Repost'),
+        (TYPE_REPLY,    'Réponse'),
     ]
 
     recipient = models.ForeignKey(
@@ -66,4 +74,12 @@ class Notification(BaseModel):
             return f'{self.sender.username} a commencé à vous suivre.'
         if self.notif_type == self.TYPE_MESSAGE:
             return f'{self.sender.username} vous a envoyé un message.'
+        if self.notif_type == self.TYPE_MENTION:
+            return f'{self.sender.username} vous a mentionné.'
+        if self.notif_type == self.TYPE_REACTION:
+            return f'{self.sender.username} a réagi à votre publication.'
+        if self.notif_type == self.TYPE_REPOST:
+            return f'{self.sender.username} a partagé votre publication.'
+        if self.notif_type == self.TYPE_REPLY:
+            return f'{self.sender.username} a répondu à votre commentaire.'
         return 'Nouvelle notification.'

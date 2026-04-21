@@ -13,5 +13,7 @@ urlpatterns = [
     path('<uuid:public_id>/save/', views.SavePostToggleView.as_view(), name='save'),
     path('<uuid:public_id>/react/', views.ReactionToggleView.as_view(), name='react'),
     path('saved/', views.SavedListView.as_view(), name='saved'),
+    path('explore/', views.ExploreView.as_view(), name='explore'),
+    path('<uuid:public_id>/repost/', views.RepostToggleView.as_view(), name='repost'),
     path('tag/<str:name>/', views.TagDetailView.as_view(), name='tag_detail'),
 ]

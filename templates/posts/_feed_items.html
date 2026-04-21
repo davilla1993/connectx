@@ -56,6 +56,9 @@
         <a href="{% url 'posts:detail' post.public_id %}" class="btn-action text-decoration-none">
             <i class="bi bi-chat me-1"></i> {{ post.comments_total|default:post.comments_count }}
         </a>
+        <button class="btn-action repost-btn" data-public-id="{{ post.public_id }}" title="Partager">
+            <i class="bi bi-arrow-repeat"></i>
+        </button>
         <button class="btn-action save-btn ms-auto" data-public-id="{{ post.public_id }}" title="Sauvegarder">
             <i class="bi bi-bookmark"></i>
         </button>

@@ -147,13 +147,17 @@ class Reaction(BaseModel):
 
 
 class Comment(BaseModel):
-    """Commentaire sur un post."""
+    """Commentaire sur un post. Peut etre une reponse a un autre commentaire."""
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='comments'
     )
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    parent = models.ForeignKey(
+        'self', null=True, blank=True,
+        on_delete=models.CASCADE, related_name='replies',
+    )
     content = models.TextField(max_length=1000)
     is_edited = models.BooleanField(default=False)
 
@@ -164,3 +168,20 @@ class Comment(BaseModel):
 
     def __str__(self):
         return f'Commentaire de {self.author} sur Post #{self.post_id}'
+
+
+class Repost(BaseModel):
+    """Partage / repost d'une publication."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='reposts',
+    )
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reposts')
+    comment = models.TextField(max_length=500, blank=True)
+
+    class Meta:
+        verbose_name = 'Repost'
+        verbose_name_plural = 'Reposts'
+        unique_together = ('user', 'post')
+        ordering = ['-created_at']
