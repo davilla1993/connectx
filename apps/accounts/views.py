@@ -54,6 +54,9 @@ class RegisterView(View):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
+            user.is_active = False  # Désactive le compte jusqu'à vérification
+            user.save()
+
             # Envoi de l'email de vérification
             try:
                 current_site = get_current_site(request)
@@ -66,12 +69,11 @@ class RegisterView(View):
                 })
                 email = EmailMessage(mail_subject, message, to=[user.email])
                 email.send(fail_silently=True)
-                messages.info(request, 'Un email de confirmation a été envoyé. Veuillez vérifier votre boîte de réception.')
+                messages.info(request, 'Un email de confirmation a été envoyé. Veuillez vérifier votre boîte de réception pour activer votre compte.')
             except Exception as e:
-                messages.error(request, "Erreur lors de l'envoi de l'email. Veuillez contacter l'administrateur.")
+                messages.error(request, "Erreur lors de l'envoi de l'email.")
 
-            login(request, user)
-            return redirect('accounts:profile')
+            return redirect('accounts:login')
         return render(request, self.template_name, {'form': form})
 
 
@@ -84,10 +86,11 @@ class VerifyEmailView(View):
             user = None
 
         if user is not None and default_token_generator.check_token(user, token):
+            user.is_active = True  # Réactive le compte
             user.is_email_verified = True
             user.save()
-            messages.success(request, 'Votre email a été vérifié avec succès !')
-            return redirect('accounts:profile')
+            messages.success(request, 'Votre email a été vérifié ! Vous pouvez maintenant vous connecter.')
+            return redirect('accounts:login')
         else:
             messages.error(request, 'Le lien de confirmation est invalide ou a expiré.')
             return redirect('accounts:login')
