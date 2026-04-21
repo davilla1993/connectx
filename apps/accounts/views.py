@@ -65,7 +65,7 @@ class RegisterView(View):
                     'token': default_token_generator.make_token(user),
                 })
                 email = EmailMessage(mail_subject, message, to=[user.email])
-                email.send()
+                email.send(fail_silently=True)
                 messages.info(request, 'Un email de confirmation a été envoyé. Veuillez vérifier votre boîte de réception.')
             except Exception as e:
                 messages.error(request, "Erreur lors de l'envoi de l'email. Veuillez contacter l'administrateur.")
