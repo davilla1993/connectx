@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.views.generic import View
 
 from .models import Follow
+from .recommendations import invalidate as invalidate_suggestions
 
 User = get_user_model()
 
@@ -45,6 +46,9 @@ class FollowToggleView(SocialLoginRequired, View):
                 created_by=request.user,
             )
             following = True
+
+        invalidate_suggestions(request.user.id)
+        invalidate_suggestions(target.id)
 
         return JsonResponse({
             'following': following,

@@ -32,6 +32,20 @@
     z-index:9999; align-items:center; justify-content:center; }
 #lightbox img { max-width:90vw; max-height:90vh; border-radius:8px; }
 #lightbox.open { display:flex; }
+
+/* Skeletons */
+.skeleton-card { padding: 14px; }
+.skeleton-line {
+    height: 12px; margin: 8px auto; border-radius: 6px;
+    background: linear-gradient(90deg, #eee 0%, #f6f6f6 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton 1.2s infinite;
+}
+@keyframes skeleton { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+/* Like animation */
+.like-btn.liked i { color: #e0245e; animation: heart-pop .35s ease; }
+@keyframes heart-pop { 0%{transform:scale(1);} 50%{transform:scale(1.4);} 100%{transform:scale(1);} }
 </style>
 {% endblock %}
 
@@ -181,78 +195,10 @@
             </form>
         </div>
 
-        {# ── Liste des posts ───────────────────────────────────────────── #}
-        {% for post in posts %}
-        <div class="cx-card mb-3">
-            <div class="p-4 pb-2">
-
-                {# En-tête auteur #}
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    {% if post.author.profile.avatar %}
-                        <img src="{{ post.author.profile.avatar.url }}" class="avatar"
-                             style="width:44px;height:44px;" alt="">
-                    {% else %}
-                        <div class="avatar-initials" style="width:44px;height:44px;">
-                            {{ post.author.username|first|upper }}
-                        </div>
-                    {% endif %}
-                    <div class="flex-grow-1">
-                        <a href="{% url 'accounts:user_profile' post.author.username %}"
-                           class="fw-bold text-decoration-none" style="color:var(--cx-primary);">
-                            {{ post.author.username }}
-                        </a>
-                        <div class="text-muted small">{{ post.created_at|timesince }}</div>
-                    </div>
-                    {% if post.author == request.user %}
-                    <form method="post" action="{% url 'posts:delete' post.public_id %}">
-                        {% csrf_token %}
-                        <button class="btn btn-sm btn-link text-danger p-0"
-                                onclick="return confirm('Supprimer cette publication ?')" title="Supprimer">
-                            <i class="bi bi-trash3"></i>
-                        </button>
-                    </form>
-                    {% endif %}
-                </div>
-
-                {# Contenu #}
-                {% if post.content %}
-                <p class="post-content mb-3">{{ post.content }}</p>
-                {% endif %}
-
-                {# Grille d'images #}
-                {% with imgs=post.images.all %}
-                {% if imgs %}
-                <div class="post-images-grid count-{{ imgs|length }} mb-3">
-                    {% for img in imgs %}
-                    <div class="img-wrap">
-                        <img src="{{ img.image.url }}" alt="{{ img.alt_text }}"
-                             data-src="{{ img.image.url }}" class="lightbox-trigger">
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% endwith %}
-            </div>
-
-            {# Actions #}
-            <div class="border-top px-4 py-2 d-flex gap-1">
-                <button class="btn-action like-btn {% if post.user_liked %}liked{% endif %}"
-                        data-public-id="{{ post.public_id }}">
-                    <i class="bi bi-heart{% if post.user_liked %}-fill{% endif %} me-1"></i>
-                    <span class="like-count">{{ post.likes_count }}</span>
-                </button>
-                <a href="{% url 'posts:detail' post.public_id %}" class="btn-action text-decoration-none">
-                    <i class="bi bi-chat me-1"></i> {{ post.comments_count }}
-                </a>
-            </div>
+        {# ── Liste des posts (partial réutilisé pour l'infinite scroll) ─ #}
+        <div id="feed-list">
+            {% include 'posts/_feed_items.html' %}
         </div>
-        {% empty %}
-        <div class="cx-card p-5 text-center text-muted">
-            <i class="bi bi-people fs-1 mb-3 d-block" style="color:var(--cx-accent);"></i>
-            <h6>Votre fil est vide</h6>
-            <p class="mb-0 small">Suivez des utilisateurs pour voir leurs publications ici.</p>
-        </div>
-        {% endfor %}
     </div>
 
     {# ── Sidebar suggestions ───────────────────────────────────────────── #}
@@ -349,31 +295,66 @@ document.addEventListener('click', function (e) {
     }
 });
 
-// ── Like ────────────────────────────────────────────────────────────────────
-document.querySelectorAll('.like-btn').forEach(btn => {
+// ── Like (optimistic UI, délégation → marche aussi pour les posts chargés après) ─
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.like-btn');
+    if (!btn) return;
     const publicId = btn.dataset.publicId;
-    // État initial depuis liked_ids Django
-    // (déjà appliqué via classe CSS dans le template)
+    const countEl = btn.querySelector('.like-count');
+    const icon = btn.querySelector('i');
+    const wasLiked = btn.classList.contains('liked');
+    const prevCount = parseInt(countEl.textContent, 10) || 0;
 
-    btn.addEventListener('click', function () {
-        fetch(`/posts/${publicId}/like/`, {
-            method: 'POST',
-            headers: {'X-CSRFToken': CSRF},
-        })
-        .then(r => r.json())
-        .then(data => {
-            this.querySelector('.like-count').textContent = data.count;
-            const icon = this.querySelector('i');
-            if (data.liked) {
-                icon.className = 'bi bi-heart-fill me-1';
-                this.classList.add('liked');
-            } else {
-                icon.className = 'bi bi-heart me-1';
-                this.classList.remove('liked');
-            }
-        });
+    // Optimistic
+    btn.classList.toggle('liked', !wasLiked);
+    icon.className = 'bi ' + (!wasLiked ? 'bi-heart-fill' : 'bi-heart') + ' me-1';
+    countEl.textContent = prevCount + (!wasLiked ? 1 : -1);
+
+    fetch(`/posts/${publicId}/like/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF},
+    })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => { countEl.textContent = data.count; })
+    .catch(() => {
+        // Rollback
+        btn.classList.toggle('liked', wasLiked);
+        icon.className = 'bi ' + (wasLiked ? 'bi-heart-fill' : 'bi-heart') + ' me-1';
+        countEl.textContent = prevCount;
     });
 });
+
+// ── Infinite scroll ─────────────────────────────────────────────────────────
+let feedLoading = false;
+const feedList = document.getElementById('feed-list');
+
+function loadMore() {
+    const sentinel = document.getElementById('feed-sentinel');
+    if (!sentinel || feedLoading) return;
+    feedLoading = true;
+    const cursor = sentinel.dataset.cursor;
+    fetch(`?partial=1&before=${encodeURIComponent(cursor)}`)
+        .then(r => r.text())
+        .then(html => {
+            sentinel.remove();
+            feedList.insertAdjacentHTML('beforeend', html);
+            feedLoading = false;
+            observeSentinel();
+        })
+        .catch(() => { feedLoading = false; });
+}
+
+let io;
+function observeSentinel() {
+    const sentinel = document.getElementById('feed-sentinel');
+    if (!sentinel) return;
+    if (io) io.disconnect();
+    io = new IntersectionObserver(entries => {
+        if (entries.some(e => e.isIntersecting)) loadMore();
+    }, { rootMargin: '400px' });
+    io.observe(sentinel);
+}
+observeSentinel();
 
 // ── Follow sidebar ──────────────────────────────────────────────────────────
 document.querySelectorAll('.follow-btn').forEach(btn => {

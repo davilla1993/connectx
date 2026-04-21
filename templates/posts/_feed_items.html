@@ -1,0 +1,78 @@
+{% for post in posts %}
+<div class="cx-card mb-3 post-card" data-post-id="{{ post.public_id }}">
+    <div class="p-4 pb-2">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            {% if post.author.profile.avatar %}
+                <img src="{{ post.author.profile.avatar.url }}" class="avatar"
+                     style="width:44px;height:44px;" alt="">
+            {% else %}
+                <div class="avatar-initials" style="width:44px;height:44px;">
+                    {{ post.author.username|first|upper }}
+                </div>
+            {% endif %}
+            <div class="flex-grow-1">
+                <a href="{% url 'accounts:user_profile' post.author.username %}"
+                   class="fw-bold text-decoration-none" style="color:var(--cx-primary);">
+                    {{ post.author.username }}
+                </a>
+                <div class="text-muted small">{{ post.created_at|timesince }}</div>
+            </div>
+            {% if post.author == request.user %}
+            <form method="post" action="{% url 'posts:delete' post.public_id %}">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-link text-danger p-0"
+                        onclick="return confirm('Supprimer cette publication ?')" title="Supprimer">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        {% if post.content %}
+        <p class="post-content mb-3">{{ post.content }}</p>
+        {% endif %}
+
+        {% with imgs=post.images.all %}
+        {% if imgs %}
+        <div class="post-images-grid count-{{ imgs|length }} mb-3">
+            {% for img in imgs %}
+            <div class="img-wrap">
+                <img src="{{ img.image.url }}" alt="{{ img.alt_text }}"
+                     data-src="{{ img.image.url }}" class="lightbox-trigger">
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="border-top px-4 py-2 d-flex gap-1">
+        <button class="btn-action like-btn {% if post.user_liked %}liked{% endif %}"
+                data-public-id="{{ post.public_id }}">
+            <i class="bi bi-heart{% if post.user_liked %}-fill{% endif %} me-1"></i>
+            <span class="like-count">{{ post.likes_total|default:post.likes_count }}</span>
+        </button>
+        <a href="{% url 'posts:detail' post.public_id %}" class="btn-action text-decoration-none">
+            <i class="bi bi-chat me-1"></i> {{ post.comments_total|default:post.comments_count }}
+        </a>
+    </div>
+</div>
+{% empty %}
+{% if not next_cursor %}
+<div class="cx-card p-5 text-center text-muted">
+    <i class="bi bi-people fs-1 mb-3 d-block" style="color:var(--cx-accent);"></i>
+    <h6>Votre fil est vide</h6>
+    <p class="mb-0 small">Suivez des utilisateurs pour voir leurs publications ici.</p>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if next_cursor %}
+<div id="feed-sentinel" data-cursor="{{ next_cursor }}" class="text-center py-3">
+    <div class="skeleton-card" aria-hidden="true">
+        <div class="skeleton-line w-25"></div>
+        <div class="skeleton-line w-75"></div>
+        <div class="skeleton-line w-50"></div>
+    </div>
+</div>
+{% endif %}
