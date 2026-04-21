@@ -100,6 +100,10 @@
         </a>
     </div>
 
+    {# Zones de tap : gauche = retour, droite = fermer; hold = pause #}
+    <div id="tap-left" style="position:absolute;top:0;bottom:0;left:0;width:33%;z-index:5;cursor:w-resize;"></div>
+    <div id="tap-right" style="position:absolute;top:0;bottom:0;right:0;width:33%;z-index:5;cursor:e-resize;"></div>
+
     {# Image #}
     <img src="{{ story.image.url }}" class="story-image" alt="{{ story.caption }}">
 
@@ -115,6 +119,26 @@
 {% block extra_js %}
 <script>
 // Redirige vers le feed après 10s (durée de la barre de progression)
-setTimeout(() => { window.location.href = '{% url "posts:feed" %}'; }, 10000);
+let closeTimer = setTimeout(() => { window.location.href = '{% url "posts:feed" %}'; }, 10000);
+const fill = document.querySelector('.story-progress-fill');
+
+// Pause / Reprise sur appui long
+function pause() { fill && (fill.style.animationPlayState = 'paused'); clearTimeout(closeTimer); }
+function resume() {
+    fill && (fill.style.animationPlayState = 'running');
+    closeTimer = setTimeout(() => { window.location.href = '{% url "posts:feed" %}'; }, 3000);
+}
+['mousedown','touchstart'].forEach(ev => document.addEventListener(ev, pause));
+['mouseup','touchend','mouseleave'].forEach(ev => document.addEventListener(ev, resume));
+
+// Tap zones
+document.getElementById('tap-right').addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.location.href = '{% url "posts:feed" %}';
+});
+document.getElementById('tap-left').addEventListener('click', (e) => {
+    e.stopPropagation();
+    history.length > 1 ? history.back() : (window.location.href = '{% url "posts:feed" %}');
+});
 </script>
 {% endblock %}
