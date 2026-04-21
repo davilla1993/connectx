@@ -291,12 +291,17 @@
 {% endif %}
 
 <div class="container-fluid cx-container py-4">
-    {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show rounded-3" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endfor %}
+    <div style="position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 9999; width: 90%; max-width: 600px;">
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg border-0 rounded-4" role="alert">
+                <div class="d-flex align-items-center gap-2">
+                    {% if message.tags == 'error' %}<i class="bi bi-exclamation-octagon-fill"></i>{% else %}<i class="bi bi-check-circle-fill"></i>{% endif %}
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    </div>
     {% block content %}{% endblock %}
 </div>
 
