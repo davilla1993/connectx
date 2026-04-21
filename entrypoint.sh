@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+echo "Gestion des permissions pour les médias..."
+mkdir -p /app/media
+chmod -R 777 /app/media
+
 echo "Collecte des fichiers statiques..."
 python manage.py collectstatic --noinput
 

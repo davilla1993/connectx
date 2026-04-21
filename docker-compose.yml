@@ -2,14 +2,20 @@ services:
   web:
     build: .
     volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
+      - connectx_static:/app/staticfiles
+      - connectx_media:/app/media
     environment:
       - DEBUG=${DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379/0
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
     depends_on:
       db:
         condition: service_healthy
@@ -19,7 +25,7 @@ services:
   db:
     image: postgres:15-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - connectx_db_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-connectx_db}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
@@ -35,6 +41,6 @@ services:
     restart: always
 
 volumes:
-  postgres_data:
-  static_volume:
-  media_volume:
+  connectx_db_data:
+  connectx_static:
+  connectx_media:
