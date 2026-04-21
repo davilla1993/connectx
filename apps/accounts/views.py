@@ -39,15 +39,19 @@ class CustomLoginView(LoginView):
     def form_invalid(self, form):
         # On récupère l'identifiant saisi (email)
         username = self.request.POST.get('username')
+        
+        # On vide systématiquement les erreurs verbeuses par défaut de Django
+        form.errors.clear()
+
         if username:
             user = User.objects.filter(email=username).first()
-            # Si l'utilisateur existe mais qu'il est inactif
+            # Cas 1 : Le compte existe mais n'est pas activé
             if user and not user.is_active:
-                # On vide les erreurs génériques de Django
-                form.errors.clear()
-                # On ajoute notre message précis directement dans le formulaire
                 form.add_error(None, "Votre compte n'est pas encore activé. Veuillez vérifier vos emails pour confirmer votre inscription.")
+                return self.render_to_response(self.get_context_data(form=form))
         
+        # Cas 2 : Identifiants incorrects (ou tout autre cas d'erreur)
+        form.add_error(None, "Email ou mot de passe incorrect")
         return self.render_to_response(self.get_context_data(form=form))
 
     def get_success_url(self):
