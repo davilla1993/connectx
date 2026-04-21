@@ -26,6 +26,11 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
+# Origines de confiance pour CSRF (nécessaire en production derrière un proxy)
+CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS if host != '*']
+# On ajoute aussi explicitement votre domaine au cas où
+CSRF_TRUSTED_ORIGINS += ["https://connectx.gfolly.com", "https://www.connectx.gfolly.com"]
+
 
 # Application definition
 
