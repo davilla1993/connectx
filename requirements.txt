@@ -10,3 +10,4 @@ django-environ
 whitenoise
 gunicorn
 uvicorn
+Pillow
