@@ -36,6 +36,15 @@ class CustomLoginView(LoginView):
     """
     template_name = 'accounts/login.html'
 
+    def form_invalid(self, form):
+        # Vérifie si l'erreur est due à un compte inactif
+        username = form.cleaned_data.get('username')
+        if username:
+            user = User.objects.filter(email=username).first()
+            if user and not user.is_active:
+                messages.error(self.request, "Votre compte n'est pas encore activé. Veuillez vérifier vos emails pour confirmer votre inscription.")
+        return super().form_invalid(form)
+
     def get_success_url(self):
         if self.request.user.is_staff:
             return '/admin/'
