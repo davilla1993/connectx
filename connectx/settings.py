@@ -26,9 +26,13 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
-# Origines de confiance pour CSRF (nécessaire en production derrière un proxy)
+# Configuration du proxy sécurisé (Coolify/Traefik)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# Origines de confiance pour CSRF
 CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS if host != '*']
-# On ajoute aussi explicitement votre domaine au cas où
 CSRF_TRUSTED_ORIGINS += ["https://connectx.gfolly.com", "https://www.connectx.gfolly.com"]
 
 
