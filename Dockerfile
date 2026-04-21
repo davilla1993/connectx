@@ -27,8 +27,8 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /install /usr/local
 COPY . .
 
-# Création des dossiers nécessaires
-RUN mkdir -p /app/staticfiles /app/media /app/static
+# Création des dossiers nécessaires et gestion des permissions
+RUN mkdir -p /app/staticfiles /app/media /app/static && chmod -R 777 /app/media
 
 # Script de démarrage
 COPY entrypoint.sh /app/entrypoint.sh
