@@ -73,6 +73,79 @@ class Like(BaseModel):
         return f'{self.user} ❤ Post #{self.post_id}'
 
 
+class Tag(BaseModel):
+    """Hashtag normalisé (lowercase, sans #)."""
+    name = models.CharField(max_length=64, unique=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Hashtag'
+        verbose_name_plural = 'Hashtags'
+
+    def __str__(self):
+        return f'#{self.name}'
+
+
+class PostTag(BaseModel):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_tags')
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='post_tags')
+
+    class Meta:
+        unique_together = ('post', 'tag')
+
+
+class Mention(BaseModel):
+    """Mention @username dans un post."""
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='mentions')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='mentions_received',
+    )
+
+    class Meta:
+        unique_together = ('post', 'user')
+
+
+class SavedPost(BaseModel):
+    """Post sauvegardé par un utilisateur."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='saved_posts',
+    )
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='savers')
+
+    class Meta:
+        verbose_name = 'Post sauvegardé'
+        verbose_name_plural = 'Posts sauvegardés'
+        unique_together = ('user', 'post')
+
+
+class Reaction(BaseModel):
+    """Réaction étendue (like / love / haha / wow / sad / angry)."""
+    LIKE = 'like'
+    LOVE = 'love'
+    HAHA = 'haha'
+    WOW  = 'wow'
+    SAD  = 'sad'
+    ANGRY = 'angry'
+    TYPES = [
+        (LIKE, '👍'), (LOVE, '❤️'), (HAHA, '😂'),
+        (WOW, '😮'), (SAD, '😢'), (ANGRY, '😡'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='reactions',
+    )
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reactions')
+    type = models.CharField(max_length=8, choices=TYPES, default=LIKE)
+
+    class Meta:
+        unique_together = ('user', 'post')
+
+
 class Comment(BaseModel):
     """Commentaire sur un post."""
     author = models.ForeignKey(

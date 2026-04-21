@@ -11,7 +11,8 @@ from social.recommendations import get_suggestions
 from stories.models import Story
 
 from .forms import CommentForm, PostForm
-from .models import Comment, Like, Post
+from .models import Comment, Like, Post, Reaction, SavedPost, Tag
+from .parser import apply_to_post
 from .ranking import ranked_feed
 
 FEED_PAGE_SIZE = 20
@@ -105,6 +106,7 @@ class PostCreateView(SocialLoginRequired, View):
             post.save()
             for image in images:
                 post.images.create(image=image, created_by=request.user)
+            apply_to_post(post)
             messages.success(request, 'Publication créée.')
         return redirect('posts:feed')
 
@@ -174,3 +176,100 @@ class LikeToggleView(SocialLoginRequired, View):
             'liked': liked,
             'count': post.likes.filter(is_deleted=False).count(),
         })
+
+
+class SavePostToggleView(SocialLoginRequired, View):
+    def post(self, request, public_id):
+        post = get_object_or_404(Post, public_id=public_id, is_deleted=False)
+        obj, created = SavedPost.objects.get_or_create(
+            user=request.user, post=post,
+            defaults={'created_by': request.user},
+        )
+        if not created:
+            if obj.is_deleted:
+                obj.is_deleted = False
+                obj.deleted_at = None
+                obj.save()
+                saved = True
+            else:
+                obj.is_deleted = True
+                obj.deleted_at = timezone.now()
+                obj.save()
+                saved = False
+        else:
+            saved = True
+        return JsonResponse({'saved': saved})
+
+
+class SavedListView(SocialLoginRequired, View):
+    template_name = 'posts/saved_list.html'
+
+    def get(self, request):
+        saves = (
+            SavedPost.objects
+            .filter(user=request.user, is_deleted=False)
+            .select_related('post__author__profile')
+            .prefetch_related('post__images')
+            .order_by('-created_at')
+        )
+        posts = [s.post for s in saves if not s.post.is_deleted]
+        return render(request, self.template_name, {'posts': posts})
+
+
+class ReactionToggleView(SocialLoginRequired, View):
+    """Crée/met à jour/supprime la réaction du user sur un post."""
+    def post(self, request, public_id):
+        post = get_object_or_404(Post, public_id=public_id, is_deleted=False)
+        rtype = request.POST.get('type', Reaction.LIKE)
+        valid = {t for t, _ in Reaction.TYPES}
+        if rtype not in valid:
+            return JsonResponse({'error': 'type invalide'}, status=400)
+
+        existing = Reaction.objects.filter(user=request.user, post=post).first()
+        if existing and existing.type == rtype and not existing.is_deleted:
+            existing.is_deleted = True
+            existing.deleted_at = timezone.now()
+            existing.save()
+            current = None
+        elif existing:
+            existing.type = rtype
+            existing.is_deleted = False
+            existing.deleted_at = None
+            existing.save()
+            current = rtype
+        else:
+            Reaction.objects.create(
+                user=request.user, post=post, type=rtype,
+                created_by=request.user,
+            )
+            current = rtype
+
+        counts = {}
+        for t, _ in Reaction.TYPES:
+            counts[t] = Reaction.objects.filter(post=post, type=t, is_deleted=False).count()
+        return JsonResponse({'current': current, 'counts': counts})
+
+
+class TagDetailView(SocialLoginRequired, View):
+    template_name = 'posts/tag_detail.html'
+
+    def get(self, request, name):
+        from django.db.models import Count, Exists, OuterRef, Q
+        name = name.lower()
+        tag = get_object_or_404(Tag, name=name, is_deleted=False)
+        liked_sub = Like.objects.filter(
+            post=OuterRef('pk'), user=request.user, is_deleted=False
+        )
+        posts = (
+            Post.objects
+            .filter(is_deleted=False, post_tags__tag=tag)
+            .select_related('author', 'author__profile')
+            .prefetch_related('images')
+            .annotate(
+                user_liked=Exists(liked_sub),
+                likes_total=Count('likes', filter=Q(likes__is_deleted=False), distinct=True),
+                comments_total=Count('comments', filter=Q(comments__is_deleted=False), distinct=True),
+            )
+            .order_by('-created_at')[:50]
+        )
+        return render(request, self.template_name, {'tag': tag, 'posts': posts})
