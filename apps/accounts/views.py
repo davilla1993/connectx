@@ -2,9 +2,15 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
+from django.contrib.sites.shortcuts import get_current_site
+from django.core.mail import EmailMessage
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.generic import View
+from django.contrib.auth.tokens import default_token_generator
 
 from .forms import ProfileEditForm, RegisterForm
 from .models import User
@@ -48,10 +54,43 @@ class RegisterView(View):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
+            # Envoi de l'email de vérification
+            try:
+                current_site = get_current_site(request)
+                mail_subject = 'Activez votre compte ConnectX'
+                message = render_to_string('accounts/acc_active_email.html', {
+                    'user': user,
+                    'domain': current_site.domain,
+                    'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                    'token': default_token_generator.make_token(user),
+                })
+                email = EmailMessage(mail_subject, message, to=[user.email])
+                email.send()
+                messages.info(request, 'Un email de confirmation a été envoyé. Veuillez vérifier votre boîte de réception.')
+            except Exception as e:
+                messages.error(request, "Erreur lors de l'envoi de l'email. Veuillez contacter l'administrateur.")
+
             login(request, user)
-            messages.success(request, f'Bienvenue, {user.username} !')
             return redirect('accounts:profile')
         return render(request, self.template_name, {'form': form})
+
+
+class VerifyEmailView(View):
+    def get(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+
+        if user is not None and default_token_generator.check_token(user, token):
+            user.is_email_verified = True
+            user.save()
+            messages.success(request, 'Votre email a été vérifié avec succès !')
+            return redirect('accounts:profile')
+        else:
+            messages.error(request, 'Le lien de confirmation est invalide ou a expiré.')
+            return redirect('accounts:login')
 
 
 class ProfileView(SocialLoginRequired, View):

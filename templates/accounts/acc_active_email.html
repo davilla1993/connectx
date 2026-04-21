@@ -1,0 +1,10 @@
+{% autoescape off %}
+Bonjour {{ user.username }},
+
+Merci de vous être inscrit sur ConnectX ! 
+Veuillez cliquer sur le lien ci-dessous pour confirmer votre adresse email :
+
+http://{{ domain }}{% url 'accounts:verify_email' uidb64=uid token=token %}
+
+Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
+{% endautoescape %}

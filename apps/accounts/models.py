@@ -14,6 +14,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     public_id = models.UUIDField(default=_uuid.uuid4, editable=False, unique=True, db_index=True)
     is_online = models.BooleanField(default=False)
+    is_email_verified = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
