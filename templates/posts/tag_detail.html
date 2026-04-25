@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}#{{ tag.name }} — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="cx-card p-4 mb-3">
+            <h4 class="mb-1" style="color:var(--cx-primary);">#{{ tag.name }}</h4>
+            <div class="text-muted small">{{ posts|length }} publication{{ posts|length|pluralize }}</div>
+        </div>
+        <div id="feed-list">
+            {% include 'posts/_feed_items.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}

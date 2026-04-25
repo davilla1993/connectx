@@ -166,17 +166,17 @@ class SearchView(SocialLoginRequired, View):
     template_name = 'accounts/search.html'
 
     def get(self, request):
+        from posts.models import Post, Tag
         query = request.GET.get('q', '').strip()
-        users = []
+        users, posts, tags = [], [], []
         if query:
-            # Exclut l'utilisateur connecté, cherche dans username et email
+            q = query.lstrip('#@')
             users = (
                 User.objects
-                .filter(Q(username__icontains=query) | Q(email__icontains=query))
+                .filter(Q(username__icontains=q) | Q(email__icontains=q))
                 .exclude(pk=request.user.pk)
                 .select_related('profile')
             )
-            # Annote si l'utilisateur connecté les suit déjà
             following_ids = set(
                 request.user.following_relations
                 .filter(is_deleted=False)
@@ -185,9 +185,19 @@ class SearchView(SocialLoginRequired, View):
             for user in users:
                 user.is_following = user.pk in following_ids
 
+            tags = Tag.objects.filter(is_deleted=False, name__icontains=q.lower())[:20]
+            posts = (
+                Post.objects
+                .filter(is_deleted=False, content__icontains=q)
+                .select_related('author', 'author__profile')
+                .order_by('-created_at')[:20]
+            )
+
         return render(request, self.template_name, {
             'query': query,
             'users': users,
+            'tags': tags,
+            'posts': posts,
         })
 
 

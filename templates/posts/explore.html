@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Explorer — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="cx-card p-4 mb-3">
+            <h5 class="mb-1" style="color:var(--cx-primary);">
+                <i class="bi bi-compass me-2"></i>Explorer
+            </h5>
+            <div class="text-muted small">Publications populaires hors de votre réseau.</div>
+        </div>
+        <div id="feed-list">
+            {% include 'posts/_feed_items.html' %}
+        </div>
+        {% if not posts %}
+        <div class="cx-card p-5 text-center text-muted">
+            <i class="bi bi-compass fs-1 mb-2 d-block" style="color:var(--cx-accent);"></i>
+            Aucune publication à découvrir pour le moment.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

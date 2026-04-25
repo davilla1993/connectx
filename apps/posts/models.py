@@ -73,14 +73,91 @@ class Like(BaseModel):
         return f'{self.user} ❤ Post #{self.post_id}'
 
 
+class Tag(BaseModel):
+    """Hashtag normalisé (lowercase, sans #)."""
+    name = models.CharField(max_length=64, unique=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Hashtag'
+        verbose_name_plural = 'Hashtags'
+
+    def __str__(self):
+        return f'#{self.name}'
+
+
+class PostTag(BaseModel):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='post_tags')
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='post_tags')
+
+    class Meta:
+        unique_together = ('post', 'tag')
+
+
+class Mention(BaseModel):
+    """Mention @username dans un post."""
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='mentions')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='mentions_received',
+    )
+
+    class Meta:
+        unique_together = ('post', 'user')
+
+
+class SavedPost(BaseModel):
+    """Post sauvegardé par un utilisateur."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='saved_posts',
+    )
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='savers')
+
+    class Meta:
+        verbose_name = 'Post sauvegardé'
+        verbose_name_plural = 'Posts sauvegardés'
+        unique_together = ('user', 'post')
+
+
+class Reaction(BaseModel):
+    """Réaction étendue (like / love / haha / wow / sad / angry)."""
+    LIKE = 'like'
+    LOVE = 'love'
+    HAHA = 'haha'
+    WOW  = 'wow'
+    SAD  = 'sad'
+    ANGRY = 'angry'
+    TYPES = [
+        (LIKE, '👍'), (LOVE, '❤️'), (HAHA, '😂'),
+        (WOW, '😮'), (SAD, '😢'), (ANGRY, '😡'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='reactions',
+    )
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reactions')
+    type = models.CharField(max_length=8, choices=TYPES, default=LIKE)
+
+    class Meta:
+        unique_together = ('user', 'post')
+
+
 class Comment(BaseModel):
-    """Commentaire sur un post."""
+    """Commentaire sur un post. Peut etre une reponse a un autre commentaire."""
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='comments'
     )
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    parent = models.ForeignKey(
+        'self', null=True, blank=True,
+        on_delete=models.CASCADE, related_name='replies',
+    )
     content = models.TextField(max_length=1000)
     is_edited = models.BooleanField(default=False)
 
@@ -91,3 +168,20 @@ class Comment(BaseModel):
 
     def __str__(self):
         return f'Commentaire de {self.author} sur Post #{self.post_id}'
+
+
+class Repost(BaseModel):
+    """Partage / repost d'une publication."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='reposts',
+    )
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reposts')
+    comment = models.TextField(max_length=500, blank=True)
+
+    class Meta:
+        verbose_name = 'Repost'
+        verbose_name_plural = 'Reposts'
+        unique_together = ('user', 'post')
+        ordering = ['-created_at']

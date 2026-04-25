@@ -16,10 +16,23 @@
         </form>
 
         {% if query %}
-            <h6 class="text-muted mb-3">
-                {{ users|length }} résultat{{ users|length|pluralize }} pour « {{ query }} »
-            </h6>
+            <h6 class="text-muted mb-3">Résultats pour « {{ query }} »</h6>
 
+            {% if tags %}
+            <div class="cx-card p-3 mb-3">
+                <div class="small text-muted text-uppercase fw-bold mb-2">Hashtags</div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for t in tags %}
+                    <a href="{% url 'posts:tag_detail' t.name %}" class="badge text-decoration-none"
+                       style="background:var(--cx-accent);color:#fff;font-size:.85rem;padding:6px 12px;">
+                        #{{ t.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if users %}<div class="small text-muted text-uppercase fw-bold mb-2">Utilisateurs</div>{% endif %}
             {% for user in users %}
             <div class="cx-card p-3 mb-2 d-flex align-items-center gap-3">
                 {% if user.profile.avatar %}
@@ -44,12 +57,24 @@
                     {% if user.is_following %}Abonné{% else %}Suivre{% endif %}
                 </button>
             </div>
-            {% empty %}
-                <div class="cx-card p-5 text-center text-muted">
-                    <i class="bi bi-person-x fs-1 mb-2 d-block"></i>
-                    Aucun utilisateur trouvé pour « {{ query }} ».
-                </div>
             {% endfor %}
+
+            {% if posts %}
+            <div class="small text-muted text-uppercase fw-bold mt-4 mb-2">Publications</div>
+            {% for post in posts %}
+            <a href="{% url 'posts:detail' post.public_id %}" class="cx-card p-3 mb-2 d-block text-decoration-none">
+                <div class="fw-bold small" style="color:var(--cx-primary);">{{ post.author.username }}</div>
+                <div class="text-muted small">{{ post.content|truncatechars:140 }}</div>
+            </a>
+            {% endfor %}
+            {% endif %}
+
+            {% if not users and not tags and not posts %}
+            <div class="cx-card p-5 text-center text-muted">
+                <i class="bi bi-search fs-1 mb-2 d-block"></i>
+                Aucun résultat pour « {{ query }} ».
+            </div>
+            {% endif %}
         {% else %}
             <div class="cx-card p-5 text-center text-muted">
                 <i class="bi bi-search fs-1 mb-2 d-block" style="color:var(--cx-accent)"></i>

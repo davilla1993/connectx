@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Sauvegardes — ConnectX{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="cx-card p-4 mb-3">
+            <h5 class="mb-0" style="color:var(--cx-primary);">
+                <i class="bi bi-bookmark-fill me-2"></i>Publications sauvegardées
+            </h5>
+        </div>
+        <div id="feed-list">
+            {% include 'posts/_feed_items.html' %}
+        </div>
+        {% if not posts %}
+        <div class="cx-card p-5 text-center text-muted">
+            <i class="bi bi-bookmark fs-1 mb-2 d-block" style="color:var(--cx-accent);"></i>
+            Vous n'avez encore rien sauvegardé.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

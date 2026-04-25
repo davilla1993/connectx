@@ -98,6 +98,83 @@ def on_follow(sender, instance, created, **kwargs):
     push_notification(notif)
 
 
+# ── Mention ──────────────────────────────────────────────────────────────────
+
+@receiver(post_save, sender='posts.Mention')
+def on_mention(sender, instance, created, **kwargs):
+    from .models import Notification
+    if not created:
+        return
+    if instance.user_id == instance.post.author_id:
+        return
+    notif = Notification.objects.create(
+        recipient=instance.user,
+        sender=instance.post.author,
+        notif_type=Notification.TYPE_MENTION,
+        post=instance.post,
+        created_by=instance.post.author,
+    )
+    push_notification(notif)
+
+
+# ── Reaction ─────────────────────────────────────────────────────────────────
+
+@receiver(post_save, sender='posts.Reaction')
+def on_reaction(sender, instance, created, **kwargs):
+    from .models import Notification
+    if not created:
+        return
+    if instance.user_id == instance.post.author_id:
+        return
+    notif = Notification.objects.create(
+        recipient=instance.post.author,
+        sender=instance.user,
+        notif_type=Notification.TYPE_REACTION,
+        post=instance.post,
+        created_by=instance.user,
+    )
+    push_notification(notif)
+
+
+# ── Repost ───────────────────────────────────────────────────────────────────
+
+@receiver(post_save, sender='posts.Repost')
+def on_repost(sender, instance, created, **kwargs):
+    from .models import Notification
+    if not created:
+        return
+    if instance.user_id == instance.post.author_id:
+        return
+    notif = Notification.objects.create(
+        recipient=instance.post.author,
+        sender=instance.user,
+        notif_type=Notification.TYPE_REPOST,
+        post=instance.post,
+        created_by=instance.user,
+    )
+    push_notification(notif)
+
+
+# ── Reply (commentaire avec parent) ─────────────────────────────────────────
+
+@receiver(post_save, sender='posts.Comment')
+def on_reply(sender, instance, created, **kwargs):
+    from .models import Notification
+    if not created or not instance.parent_id:
+        return
+    parent_author_id = instance.parent.author_id
+    if parent_author_id == instance.author_id:
+        return
+    notif = Notification.objects.create(
+        recipient_id=parent_author_id,
+        sender=instance.author,
+        notif_type=Notification.TYPE_REPLY,
+        post=instance.post,
+        created_by=instance.author,
+    )
+    push_notification(notif)
+
+
 # ── Message ───────────────────────────────────────────────────────────────────
 
 @receiver(post_save, sender='chat.Message')
